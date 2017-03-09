@@ -1,0 +1,32 @@
+.floatDiv {
+    z-index: 1020;
+    display: none;
+    width: 700px;
+    height: 500px;
+    position: fixed;
+    left: 15%;
+    top: 15%;
+}
+
+.closeDiv {
+    position: absolute;
+    right: 1%;
+    top: 1%;
+}
+
+.divTitle {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+#floatDiv_About{
+    width: 700px;
+    height: 500px;
+    position: fixed;
+    left: 15%;
+    top: 14%;
+}
+
+#floatDiv_notice{
+	height: 460px;
+}

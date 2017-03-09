@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+	<head>
+		<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+		<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width" />
+		<meta name="generator" content="Bootply" />
+		<title>TaxiMan</title>
+
+		<!-- CSS 框架引入 -->
+		<link rel="stylesheet" href="./frame/bootstrap-3.3.7/css/bootstrap.css">
+		<link rel="stylesheet" href="./css/styles.css">
+		<link rel="stylesheet" href="./css/popup.css">
+		<link rel="stylesheet" href="./css/floatDiv.css">
+
+		<!-- JS 框架引入 -->
+		<script src="./frame/echarts.js"></script>
+		<script src="./frame/jquery-3.1.1.js"></script>
+		<script src="./frame/bootstrap-3.3.7/js/bootstrap.js"></script>
+		<script src="./frame/iconfont.js"></script>
+		<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=27puF9VLwi4QAg2QdSqQyImCxzp4NK9U"></script>
+		<script src="./frame/HeatMap_min.js"></script>
+		<script src="./frame/jquerysession.js"></script>
+		<script src="./frame/GeoUtils.js"></script>
+		<script src="./frame/AreaRestriction.js"></script>
+
+		<!-- JS 代码引入 -->
+		<script type="text/javascript" src="./js/covCoords.js"></script>
+		<script type="text/javascript" src="./js/initMap.js"></script>
+		<script type="text/javascript" src="./js/popup.js"></script>
+		<script type="text/javascript" src="./js/floatDiv.js"></script>
+
+		<script>
+			(function() {
+				$(document).ready(function() {
+					$('#navbox-trigger').click(function() {
+						return $('#top-bar').toggleClass('navbox-open');
+					});
+					return $(document).on('click', function(e) {
+						var $target;
+						$target = $(e.target);
+						if(!$target.closest('.navbox').length && !$target.closest('#navbox-trigger').length) {
+							return $('#top-bar').removeClass('navbox-open');
+						}
+					});
+				});
+			}.call(this));
+		</script>
+
+		<script>
+			$(function() {
+				/**
+	  				ifDrag: 是否拖拽
+	  				dragLimit: 拖拽限制范围
+   				*/
+				$('#popup').popup({ ifDrag: true, dragLimit: true });
+			});
+		</script>
+
+		<style type="text/css">
+			html,
+			body {
+				font-size: 100%;
+				height: 100%;
+				width: 100%;
+				padding-bottom: 40px;
+				color: #5a5a5a;
+			}
+			
+			#mapview {
+				z-index: 0;
+				position: absolute;
+				top: 0px;
+				bottom: 0px;
+				left: 0px;
+				right: 0px;
+			}
+		</style>
+		<style>
+			.navbar-wrapper {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				z-index: 10;
+			}
+			
+			@media (min-width: 768px) {
+				/* Remve the edge padding needed for mobile */
+				.marketing {
+					padding-left: 0;
+					padding-right: 0;
+				}
+				/* Navbar positioning foo */
+				.navbar-wrapper {
+					margin-top: 20px;
+					margin-bottom: -90px;
+					/* Negative margin to pull up carousel. 90px is roughly margins and height of navbar. */
+				}
+				/* The navbar becomes detached from the top, so we round the corners */
+				.navbar-wrapper .navbar {
+					border-radius: 4px;
+				}
+				/* Bump up size of carousel content */
+				.carousel-caption p {
+					margin-bottom: 20px;
+					font-size: 21px;
+					line-height: 1.4;
+				}
+			}
+		</style>
+
+		<style type="text/css">
+			.icon {
+				width: 1em;
+				height: 1em;
+				vertical-align: -0.15em;
+				fill: currentColor;
+				overflow: hidden;
+			}
+		</style>
+
+	</head>
+
+	<body>
+		<div id="popup">
+			<div class="title">
+				<p data-title="Popup Text">
+					<span>x</span>
+			</div>
+			<div class="cont"></div>
+		</div>
+		<div id="mask_shadow"></div>
+		<div class="container">
+			<div id="btbox" style="position: fixed; top: 100px; left: 15px; z-index: 1010;">
+				<button id="navbox-trigger" class="navbox-trigger btn btn-default btn-sm" title="图层管理">
+					<svg class="icon" aria-hidden="true" style="font-size: 1.8em;">
+					    <use xlink:href="#icon-tuceng"></use>
+					</svg>
+				</button>
+				<div id="top-bar" class="top-bar">
+					<div class="navbox">
+						<div class="navbox-tiles">
+							<a href="#" class="tile" onclick="onPolygonClick()">
+								<svg class="icon" aria-hidden="true">
+									<use xlink:href="#icon-quyu3"></use>
+								</svg>
+								<span class="title">区域监测图层</span>
+							</a>
+							<a href="#" class="tile" onclick="onHeatmapClick()">
+								<svg class="icon" aria-hidden="true">
+									<use xlink:href="#icon-quyuguanli1"></use>
+								</svg>
+								<span class="title">出租车热力分析</span>
+							</a>
+							<a href="#" class="tile" onclick="onDockpntClick()">
+								<svg class="icon" aria-hidden="true">
+									<use xlink:href="#icon-quyushuxing"></use>
+								</svg>
+								<span class="title">停靠点监测</span>
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="navbar-wrapper">
+				<div class="container">
+					<nav class="navbar navbar-inverse navbar-static-top">
+						<div class="navbar-header">
+							<a class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+								<span class="icon-bar"></span>
+								<span class="icon-bar"></span>
+								<span class="icon-bar"></span>
+							</a>
+							<a class="navbar-brand" href="#">TaxiMan <small>城市出租车区域调控管理系统</small></a>
+						</div>
+						<div class="navbar-collapse collapse">
+							<ul class="nav navbar-nav">
+								<li class="active">
+									<a href="#">区域监控</a>
+								</li>
+								<li>
+									<a href="#" onclick="$('#floatDiv_About').show('fast')">关于</a>
+								</li>
+								<li>
+									<a href="#">帮助</a>
+								</li>
+								<li class="dropdown">
+									<a href="#" class="dropdown-toggle" data-toggle="dropdown">功能<b class="caret"></b></a>
+									<ul class="dropdown-menu">
+										<li>
+											<a href="#" onclick="ae24Click()">24小时区域分析图表</a>
+										</li>
+										<li>
+											<a href="#" onclick="$('#floatDiv_MonthAnalyze').show('fast')">月度区域分析图表</a>
+										</li>
+										<li class="divider"></li>
+										<li>
+											<a href="#" onclick="$('#floatDiv_regulation').show('fast')">出租车区域调控(通知)</a>
+										</li>
+										<li>
+											<a href="#" onclick="$('#floatDiv_notice').show('fast')">出租车通知</a>
+										</li>
+									</ul>
+								</li>
+							</ul>
+							<form class="navbar-form navbar-right" role="search" style="position: relative;right: 10px;">
+								<div class="form-group input-group">
+									<input type="text" class="form-control" placeholder="Search for...">
+									<span class="input-group-btn">
+										<button class="btn btn-default" type="button">Go!</button>
+									</span>
+								</div>
+							</form>
+						</div>
+					</nav>
+				</div>
+				<!-- /container -->
+			</div>
+			<!-- /navbar wrapper -->
+
+			<!-- BMap viewer DIV -->
+			<div id="mapview"></div>
+
+			<div class="floatDiv panel panel-primary" id="floatDiv_About">
+				<div class="divTitle panel-heading">
+					<p>
+						关于
+						<button class="closeDiv btn btn-default btn-xm" onclick="$('#floatDiv_About').hide('fast')">
+							<svg class="icon" aria-hidden="true" style="font-size: 1em;">
+							    <use xlink:href="#icon-close"></use>
+							</svg>
+						</button>
+					</p>
+				</div>
+				<div class="panel-body">
+					<h1>TaxiMan</h1>
+					<p>Intelligent City Taxi Area Monitoring and Management System</p>
+					<p>追求精准、快捷、科学的城市出租车辆区域监控管理系统</p>
+					<p>版本：0.8.1 dev</p>
+					<a role="button" class="btn btn-primary" href="Mailto:mstar2012@163.com">与我联系</a>
+					<br/><br/><br/>
+				</div>
+				<div class="panel-footer" style="font-size: 0.7em;">
+					<br/>
+					<p>TaxiMan</p>
+					<p>版权所有： 2017 南通大学 地理科学学院 保留所有权利。</p>
+					<p>TaxiMan 的诞生离不开各类开源软件的支持。</p>
+					<p>项目托管网址:
+						<a herf="https://github.com/MeteorInfinity/TaxiMan" target="_blank">https://github.com/MeteorInfinity/TaxiMan</a>
+					</p>
+					<a href="http://www.miibeian.gov.cn" target="_blank">豫ICP备16013438号</a>
+				</div>
+			</div>
+
+			<div class="floatDiv panel panel-default" id="floatDiv_24hAnalyze">
+				<div class="divTitle panel-heading">
+					24小时区域分析
+					<button class="closeDiv btn btn-default btn-xm" onclick="$('#floatDiv_24hAnalyze').hide('fast')">
+						<svg class="icon" aria-hidden="true" style="font-size: 1em;">
+						    <use xlink:href="#icon-close"></use>
+						</svg>
+					</button>
+				</div>
+				<div class="panel-body">
+					<div id="24hAnalyzeEcharts" style="height: 440px; width: 650px;"></div>
+				</div>
+			</div>
+
+			<div class="floatDiv panel panel-default" id="floatDiv_MonthAnalyze">
+				<div class="divTitle panel-heading">
+					月度区域分析
+					<button class="closeDiv btn btn-default btn-xm" onclick="$('#floatDiv_MonthAnalyze').hide('fast')">
+						<svg class="icon" aria-hidden="true" style="font-size: 1em;">
+						    <use xlink:href="#icon-close"></use>
+						</svg>
+					</button>
+				</div>
+				<div class="panel-body">
+				</div>
+			</div>
+
+			<div class="floatDiv panel panel-default" id="floatDiv_regulation">
+				<div class="divTitle panel-heading">
+					区域出租车辆调控
+					<button class="closeDiv btn btn-default btn-xm" onclick="$('#floatDiv_regulation').hide('fast')">
+						<svg class="icon" aria-hidden="true" style="font-size: 1em;">
+						    <use xlink:href="#icon-close"></use>
+						</svg>
+					</button>
+				</div>
+				<div class="panel-body">
+				</div>
+			</div>
+
+			<div class="floatDiv panel panel-default" id="floatDiv_notice">
+				<div class="divTitle panel-heading">
+					出租车辆信息通知
+					<button class="closeDiv btn btn-default btn-xm" onclick="$('#floatDiv_notice').hide('fast')">
+						<svg class="icon" aria-hidden="true" style="font-size: 1em;">
+						    <use xlink:href="#icon-close"></use>
+						</svg>
+					</button>
+				</div>
+				<div class="panel-body">
+					<br />
+					<div class="from-group">
+						<div class="input-group">
+							<div class="input-group-btn">
+								<select class="form-control " id="tnPost_type" style="width: auto;">
+									<option value="simNum" selected="selected">终端SIM卡号</option>
+									<option value="plateNum">车牌号</option>
+								</select>
+							</div>
+							<input id="tnPost_num" type="text" class="form-control" placeholder="请输入出租车牌号或SIM卡号">
+							<span class="input-group-btn">
+						    		<button class="btn btn-default" onclick="taxiVer()" type="button">验证</button>
+						    	</span>
+						</div>
+						<br />
+						<div id="tnPost_alert_t" class="alert alert-info alert-dismissible" role="alert" style="position: absolute; display: none;">
+							<button type="button" class="close" onclick="$('#tnPost_alert_t').hide()" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+							<strong>正确!</strong> 我们在在线数据库中检索到数据
+						</div>
+						<div id="tnPost_alert_w" class="alert alert-warning alert-dismissible" role="alert" style="position: absolute; display: none;">
+							<button type="button" class="close" onclick="$('#tnPost_alert_w').hide()"><span aria-hidden="true">&times;</span></button>
+							<strong>错误!</strong> 请检查您的输入，我们并未在在线数据中找到对应的条目。
+						</div>
+						<div id="tnPost_alert_e" class="alert alert-danger alert-dismissible" role="alert" style="position: absolute; display: none;">
+							<button type="button" class="close" onclick="$('#tnPost_alert_e').hide()"><span aria-hidden="true">&times;</span></button>
+							<strong>失败!</strong> 我们未能成功发送数据
+						</div>
+						<div id="tnPost_alert_s" class="alert alert-success alert-dismissible" role="alert" style="position: absolute; display: none;">
+							<button type="button" class="close" onclick="$('#tnPost_alert_s').hide()"><span aria-hidden="true">&times;</span></button>
+							<strong>成功!</strong> 我们已成功发送数据
+						</div>
+						<br />
+						<br />
+						<br />
+						<textarea class="form-control" rows="8" id="tnPost_text" placeholder="请输入要发送的信息"></textarea>
+						<br />
+						<button id="ArchDiv_Query_Submit" onclick="taxiNotice()" class="btn btn-default" type="button" style="float: right;">发送</button>
+					</div>
+				</div>
+			</div>
+
+		</div>
+
+	</body>
+
+</html>
